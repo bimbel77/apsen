@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Presensi Siswa Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col md:flex-row">
+
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-md w-full sm:w-96"></div>
+
+    <aside class="w-full md:w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col z-20 shadow-xl">
+        <!-- Header Sidebar -->
+        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-600/30">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base tracking-wide">E-PRESENSI</h1>
+                    <span class="text-xs text-indigo-400 font-semibold tracking-wider uppercase">Sistem Kehadiran</span>
+                </div>
+            </div>
+            <!-- Mobile Menu Toggle Button -->
+            <button id="mobile-menu-btn" class="md:hidden text-slate-400 hover:text-white p-1">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Navigasi Menu -->
+        <nav id="sidebar-nav" class="hidden md:flex flex-col flex-1 p-4 gap-1 overflow-y-auto">
+            <button onclick="switchView('dashboard')" data-view="dashboard" class="nav-item flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white group">
+                <i class="fa-solid fa-chart-pie text-lg transition-transform group-hover:scale-110"></i>
+                <span class="font-medium text-sm">Dashboard</span>
+            </button>
+            <button onclick="switchView('siswa')" data-view="siswa" class="nav-item flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white group">
+                <i class="fa-solid fa-users text-lg transition-transform group-hover:scale-110"></i>
+                <span class="font-medium text-sm">Kelola Siswa</span>
+            </button>
+            <button onclick="switchView('presensi')" data-view="presensi" class="nav-item flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white group">
+                <i class="fa-solid fa-calendar-check text-lg transition-transform group-hover:scale-110"></i>
+                <span class="font-medium text-sm">Isi Presensi</span>
+            </button>
+            <button onclick="switchView('riwayat')" data-view="riwayat" class="nav-item flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white group">
+                <i class="fa-solid fa-clock-rotate-left text-lg transition-transform group-hover:scale-110"></i>
+                <span class="font-medium text-sm">Riwayat & Laporan</span>
+            </button>
+            
+            <div class="h-[1px] bg-slate-800 my-4"></div>
+            <span class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Konfigurasi</span>
+
+            <button onclick="switchView('firebase-config')" data-view="firebase-config" class="nav-item flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white group">
+                <i class="fa-solid fa-database text-lg transition-transform group-hover:scale-110"></i>
+                <span class="font-medium text-sm text-left">Set Database</span>
+            </button>
+            <button onclick="switchView('panduan')" data-view="panduan" class="nav-item flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white group">
+                <i class="fa-solid fa-book-open text-lg transition-transform group-hover:scale-110"></i>
+                <span class="font-medium text-sm text-left">Panduan Deploy</span>
+            </button>
+        </nav>
+
+        <!-- Status Koneksi Firebase -->
+        <div class="p-4 border-t border-slate-800 bg-slate-950/40">
+            <div class="flex items-center gap-3">
+                <div class="relative flex h-2.5 w-2.5">
+                    <span id="db-status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span id="db-status-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Database Status:</p>
+                    <p id="db-status-text" class="text-xs font-semibold text-amber-500">Menghubungkan...</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+        <!-- Top Bar -->
+        <header class="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h2 id="view-title" class="text-xl font-bold text-slate-800">Dashboard Statistik</h2>
+                <p id="view-desc" class="text-xs text-slate-500">Ringkasan kehadiran siswa hari ini.</p>
+            </div>
+            <!-- Waktu Sistem -->
+            <div class="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-xl text-slate-600 text-sm font-semibold border border-slate-200 self-start sm:self-auto">
+                <i class="fa-solid fa-calendar-day text-indigo-600"></i>
+                <span id="clock-display">-</span>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <div id="content-area" class="p-6 flex-1 overflow-y-auto">
+            
+            <!-- VIEW: DASHBOARD -->
+            <div id="view-dashboard" class="space-y-6">
+                <!-- Statistik Grid -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Card Total Siswa -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-4 bg-indigo-50 text-indigo-600 rounded-xl">
+                            <i class="fa-solid fa-users-viewfinder text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">Total Siswa</p>
+                            <h3 id="stat-total-siswa" class="text-2xl font-bold">0</h3>
+                        </div>
+                    </div>
+                    <!-- Card Hadir -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-4 bg-emerald-50 text-emerald-600 rounded-xl">
+                            <i class="fa-solid fa-circle-check text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">Hadir Hari Ini</p>
+                            <h3 id="stat-hadir" class="text-2xl font-bold">0</h3>
+                        </div>
+                    </div>
+                    <!-- Card Sakit / Izin -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-4 bg-amber-50 text-amber-600 rounded-xl">
+                            <i class="fa-solid fa-house-medical text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">Sakit & Izin</p>
+                            <h3 id="stat-sakit-izin" class="text-2xl font-bold">0</h3>
+                        </div>
+                    </div>
+                    <!-- Card Alpa -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="p-4 bg-rose-50 text-rose-600 rounded-xl">
+                            <i class="fa-solid fa-circle-xmark text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">Alpa Hari Ini</p>
+                            <h3 id="stat-alpa" class="text-2xl font-bold">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grafik visual presensi hari ini -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-simple text-indigo-600"></i>
+                            Persentase Kehadiran Hari Ini
+                        </h4>
+                        <div class="h-64 flex items-end justify-between gap-4 pt-4 px-2" id="attendance-bar-chart">
+                            <!-- JS will inject dynamic bar chart elements here -->
+                        </div>
+                    </div>
+
+                    <!-- Ringkasan Kehadiran Hari Ini -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-slate-800 mb-2">Rasio Kehadiran</h4>
+                            <p class="text-xs text-slate-500 mb-4">Target harian rasio kehadiran di atas 95%.</p>
+                        </div>
+                        <div class="flex flex-col items-center justify-center py-6">
+                            <div class="relative flex items-center justify-center">
+                                <!-- Ring Progress -->
+                                <svg class="w-36 h-36 transform -rotate-90">
+                                    <circle cx="72" cy="72" r="60" stroke="#f1f5f9" stroke-width="12" fill="transparent" />
+                                    <circle id="progress-circle" cx="72" cy="72" r="60" stroke="#4f46e5" stroke-width="12" fill="transparent" stroke-dasharray="377" stroke-dashoffset="377" class="transition-all duration-1000 ease-out" />
+                                </svg>
+                                <span id="progress-percent" class="absolute text-2xl font-extrabold text-slate-800">0%</span>
+                            </div>
+                        </div>
+                        <div class="text-center text-xs text-slate-500" id="ratio-verdict">
+                            Silakan isi data presensi hari ini terlebih dahulu.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: KELOLA SISWA -->
+            <div id="view-siswa" class="hidden space-y-6">
+                <!-- Action bar -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <!-- Search -->
+                    <div class="relative w-full sm:w-72">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="siswa-search" oninput="renderSiswaList()" placeholder="Cari nama atau NISN..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    </div>
+                    <!-- Add Button -->
+                    <button onclick="openAddSiswaModal()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-plus"></i>
+                        Tambah Siswa Baru
+                    </button>
+                </div>
+
+                <!-- Grid Daftar Siswa -->
+                <div id="siswa-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Dynamic rendering of student cards -->
+                </div>
+            </div>
+
+            <!-- VIEW: ISI PRESENSI -->
+            <div id="view-presensi" class="hidden space-y-6">
+                <!-- Selector Tanggal dan Kelas -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                        <div class="flex flex-col w-full sm:w-auto">
+                            <label class="text-xs font-bold text-slate-500 mb-1">PILIH TANGGAL PRESENSI</label>
+                            <input type="date" id="presensi-date-select" onchange="loadAttendanceForSelectedDate()" class="border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-semibold">
+                        </div>
+                    </div>
+                    <!-- Quick Actions -->
+                    <div class="flex gap-2 w-full md:w-auto justify-end">
+                        <button onclick="setAllAttendance('H')" class="px-3.5 py-2 border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-check-double"></i> Tandai Semua Hadir
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Formulir/Tabel Presensi -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                    <th class="py-4 px-6">Siswa / Profil</th>
+                                    <th class="py-4 px-6 text-center">Status Kehadiran</th>
+                                    <th class="py-4 px-6">Keterangan / Catatan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-table-body" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Save Footer -->
+                    <div class="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <p class="text-xs text-slate-500">Pastikan memeriksa kembali status kehadiran sebelum menyimpan.</p>
+                        <button onclick="saveAttendance()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-floppy-disk"></i> Simpan Presensi Hari Ini
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: RIWAYAT & LAPORAN -->
+            <div id="view-riwayat" class="hidden space-y-6">
+                <!-- Filter Section -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-slate-800">Laporan Bulanan</h4>
+                        <p class="text-xs text-slate-500">Gunakan filter untuk mengekspor rekapitulasi data.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="exportToCSV()" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold text-sm px-4 py-2.5 rounded-xl border border-indigo-100 flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-file-csv"></i> Ekspor CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Rekap Keseluruhan -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-200">
+                        <h5 class="font-bold text-slate-800">Tabel Rekap Kehadiran Siswa</h5>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                    <th class="py-4 px-6">Siswa</th>
+                                    <th class="py-4 px-6 text-center">Hadir</th>
+                                    <th class="py-4 px-6 text-center">Sakit</th>
+                                    <th class="py-4 px-6 text-center">Izin</th>
+                                    <th class="py-4 px-6 text-center">Alpa</th>
+                                    <th class="py-4 px-6 text-center">Total Presensi</th>
+                                    <th class="py-4 px-6 text-center">Persentase</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rekap-table-body" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: FIREBASE CONFIG -->
+            <div id="view-firebase-config" class="hidden space-y-6">
+                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm max-w-2xl mx-auto space-y-6">
+                    <div class="flex items-center gap-4 border-b border-slate-100 pb-4">
+                        <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                            <i class="fa-solid fa-database text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-lg text-slate-800">Pengaturan Firebase Database</h3>
+                            <p class="text-xs text-slate-500">Sesuaikan dengan data Firebase milik Anda sendiri agar data tersimpan selamanya.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800 space-y-2">
+                        <p class="font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> Informasi Penting:</p>
+                        <p>Secara default, aplikasi berjalan di mode demo sandbox. Jika Anda ingin menggunakan database Firebase Google milik Anda untuk dipasang di GitHub Pages, silakan masukkan kredensial config Firebase Anda di bawah ini.</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase">Firebase Config JSON</label>
+                            <textarea id="firebase-config-input" rows="8" placeholder='{\n  "apiKey": "...",\n  "authDomain": "...",\n  "projectId": "...",\n  "storageBucket": "...",\n  "messagingSenderId": "...",\n  "appId": "..."\n}' class="w-full p-4 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></textarea>
+                        </div>
+                        <div class="flex gap-3 justify-end pt-2">
+                            <button onclick="saveCustomFirebaseConfig()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-floppy-disk"></i> Simpan & Hubungkan Database
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: PANDUAN DEPLOY -->
+            <div id="view-panduan" class="hidden space-y-6">
+                <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto space-y-6">
+                    <div class="flex items-center gap-4 border-b border-slate-100 pb-4">
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                            <i class="fa-solid fa-book text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-lg text-slate-800">Panduan Lengkap Firebase & GitHub Pages</h3>
+                            <p class="text-xs text-slate-500">Ikuti instruksi ini untuk me-online-kan aplikasi Anda.</p>
+                        </div>
+                    </div>
+
+                    <!-- Steps -->
+                    <div class="space-y-6">
+                        <div class="flex gap-4">
+                            <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
+                            <div class="space-y-2">
+                                <h4 class="font-bold text-slate-800">Membuat Project Firebase Baru</h4>
+                                <p class="text-sm text-slate-600 leading-relaxed">Buka <a href="https://console.firebase.google.com/" target="_blank" class="text-indigo-600 underline">Firebase Console</a>, buat project baru (bebas memberi nama, matikan analitik jika tidak perlu).</p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
+                            <div class="space-y-2">
+                                <h4 class="font-bold text-slate-800">Setup Cloud Firestore Database</h4>
+                                <ul class="list-disc pl-5 text-sm text-slate-600 space-y-1.5 leading-relaxed">
+                                    <li>Klik menu <strong>Firestore Database</strong> di sidebar kiri Firebase Console Anda.</li>
+                                    <li>Klik tombol <strong>Create Database</strong>.</li>
+                                    <li>Pilih lokasi terdekat (misalnya <code>asia-southeast2</code> untuk Jakarta).</li>
+                                    <li>Pilih <strong>Start in test mode</strong> agar aplikasi dapat membaca dan menulis data dengan mudah tanpa ribet aturan otentikasi ketat. Klik <strong>Create/Enable</strong>.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold flex-shrink-0">3</div>
+                            <div class="space-y-2">
+                                <h4 class="font-bold text-slate-800">Menyalin Firebase Config SDK</h4>
+                                <ul class="list-disc pl-5 text-sm text-slate-600 space-y-1.5 leading-relaxed">
+                                    <li>Masuk ke Project Settings (ikon gerigi di samping 'Project Overview').</li>
+                                    <li>Di bawah tab 'General', gulir ke bawah ke bagian **Your Apps**.</li>
+                                    <li>Klik ikon **Web (</>)**, daftarkan aplikasi ini (nama bebas).</li>
+                                    <li>Salin objek JSON di dalam variabel <code>firebaseConfig</code>. Contoh format yang dibutuhkan:
+                                        <pre class="bg-slate-50 border border-slate-200 text-xs p-3 rounded-lg font-mono text-slate-600 mt-2">
+{
+  "apiKey": "AIzaSy...",
+  "authDomain": "app-id.firebaseapp.com",
+  "projectId": "app-id",
+  "storageBucket": "app-id.appspot.com",
+  "messagingSenderId": "...",
+  "appId": "..."
+}</pre>
+                                    </li>
+                                    <li>Masukkan JSON tersebut ke dalam menu <strong>Set Database</strong> di aplikasi ini.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold flex-shrink-0">4</div>
+                            <div class="space-y-2">
+                                <h4 class="font-bold text-slate-800">Menyimpan File & Upload ke GitHub Pages</h4>
+                                <ul class="list-disc pl-5 text-sm text-slate-600 space-y-1.5 leading-relaxed">
+                                    <li>Simpan file halaman web ini dengan nama <code>index.html</code>.</li>
+                                    <li>Buka akun GitHub Anda, buat sebuah repository baru (pilih Public).</li>
+                                    <li>Upload file <code>index.html</code> Anda ke repository tersebut.</li>
+                                    <li>Buka tab **Settings** di halaman repository tersebut, pilih sub-menu **Pages** di sebelah kiri.</li>
+                                    <li>Pada kolom "Build and deployment", pilih branch <code>main</code> atau <code>master</code>, lalu simpan.</li>
+                                    <li>Tunggu 1-2 menit, GitHub Pages akan menyajikan link live website aplikasi Anda!</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="siswa-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform scale-95 transition-all duration-300">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <h3 id="modal-title" class="font-extrabold text-slate-800 text-base">Tambah Siswa Baru</h3>
+                <button onclick="closeSiswaModal()" class="text-slate-400 hover:text-slate-600 transition-all">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <!-- Modal Body -->
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="siswa-id">
+                
+                <!-- Input Nama -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Nama Lengkap</label>
+                    <input type="text" id="siswa-nama" placeholder="Contoh: Muhammad Ali" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+
+                <!-- Input NISN -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">NISN</label>
+                    <input type="text" id="siswa-nisn" placeholder="Contoh: 0012345678" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+
+                <!-- Input Kelas -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Kelas</label>
+                    <input type="text" id="siswa-kelas" placeholder="Contoh: XII RPL 1" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+
+                <!-- Unggah Foto Siswa -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Foto Profil Siswa</label>
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-full border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center flex-shrink-0 relative">
+                            <img id="siswa-photo-preview" src="https://placehold.co/150x150/e2e8f0/64748b?text=Profil" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-slate-200 hover:border-indigo-500 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 transition-all bg-white shadow-sm">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                Unggah Foto
+                                <input type="file" id="siswa-photo-input" accept="image/*" onchange="handlePhotoUpload(this)" class="hidden">
+                            </label>
+                            <p class="text-[10px] text-slate-400 mt-1">Gunakan gambar JPG/PNG. Sistem akan otomatis memperkecil rasio gambar Anda.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button onclick="closeSiswaModal()" class="px-4 py-2 text-slate-500 hover:text-slate-800 text-sm font-semibold transition-all">Batal</button>
+                <button onclick="saveSiswa()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-floppy-disk"></i> Simpan Data
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Firebase SDK 11.6.1 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Variabel global lingkungan
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'presensi-siswa-pro-app';
+        let firebaseConfig = null;
+        let db = null;
+        let auth = null;
+        let activeSnapshotUnsubs = [];
+
+        // Penampung data lokal agar UI cepat berinteraksi
+        let localStudents = [];
+        let localAttendance = {}; // key: Date, value: { records: {}, notes: {} }
+        let currentSiswaPhotoBase64 = "";
+
+        // UI Views Switching
+        window.switchView = function(viewId) {
+            const views = ['dashboard', 'siswa', 'presensi', 'riwayat', 'firebase-config', 'panduan'];
+            views.forEach(v => {
+                const element = document.getElementById(`view-${v}`);
+                if (element) {
+                    if (v === viewId) {
+                        element.classList.remove('hidden');
+                    } else {
+                        element.classList.add('hidden');
+                    }
+                }
+            });
+
+            // Ganti Title di header
+            const titleEl = document.getElementById('view-title');
+            const descEl = document.getElementById('view-desc');
+            const navItems = document.querySelectorAll('.nav-item');
+
+            navItems.forEach(item => {
+                if (item.getAttribute('onclick').includes(viewId)) {
+                    item.classList.add('bg-indigo-600', 'text-white');
+                    item.classList.remove('text-slate-400');
+                } else {
+                    item.classList.remove('bg-indigo-600', 'text-white');
+                    item.classList.add('text-slate-400');
+                }
+            });
+
+            switch (viewId) {
+                case 'dashboard':
+                    titleEl.innerText = 'Dashboard Statistik';
+                    descEl.innerText = 'Ringkasan kehadiran siswa hari ini.';
+                    calculateDashboardStats();
+                    break;
+                case 'siswa':
+                    titleEl.innerText = 'Kelola Siswa';
+                    descEl.innerText = 'Tambah, edit, dan atur detail profil siswa.';
+                    renderSiswaList();
+                    break;
+                case 'presensi':
+                    titleEl.innerText = 'Isi Presensi Harian';
+                    descEl.innerText = 'Gunakan form di bawah ini untuk mencatat presensi hari ini.';
+                    loadAttendanceForSelectedDate();
+                    break;
+                case 'riwayat':
+                    titleEl.innerText = 'Riwayat & Rekap Laporan';
+                    descEl.innerText = 'Tinjau total akumulasi kehadiran semua siswa.';
+                    calculateReportRekap();
+                    break;
+                case 'firebase-config':
+                    titleEl.innerText = 'Pengaturan Koneksi Firebase';
+                    descEl.innerText = 'Hubungkan ke Firebase milik Anda sendiri.';
+                    break;
+                case 'panduan':
+                    titleEl.innerText = 'Panduan Integrasi';
+                    descEl.innerText = 'Langkah setup deployment dan database gratis.';
+                    break;
+            }
+
+            // Mobile menu auto collapse
+            document.getElementById('sidebar-nav').classList.add('hidden');
+        };
+
+        window.showToast = function(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = "bg-emerald-500 border-emerald-600 text-white";
+            let iconClass = "fa-circle-check";
+            if (type === 'error') {
+                bgClass = "bg-rose-500 border-rose-600 text-white";
+                iconClass = "fa-circle-exclamation";
+            } else if (type === 'info') {
+                bgClass = "bg-indigo-500 border-indigo-600 text-white";
+                iconClass = "fa-circle-info";
+            }
+
+            toast.className = `flex items-center gap-3 p-4 rounded-xl border shadow-lg transition-all duration-300 transform translate-x-12 opacity-0 ${bgClass}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass} text-lg"></i>
+                <div class="flex-1 text-sm font-semibold">${message}</div>
+                <button class="text-white/80 hover:text-white" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-x-12', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 4000);
+        };
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('presensi-date-select').value = todayStr;
+
+        function updateClock() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const today = new Date();
+            document.getElementById('clock-display').innerText = today.toLocaleDateString('id-ID', options);
+        }
+        updateClock();
+        setInterval(updateClock, 60000);
+
+        // Mobile Menu Button Logic
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const nav = document.getElementById('sidebar-nav');
+            nav.classList.toggle('hidden');
+        });
+
+        async function setupFirebase() {
+            updateDbStatus('Connecting', 'amber');
+
+            // 1. Coba ambil custom firebase config dari localStorage
+            const storedConfig = localStorage.getItem('custom_firebase_config_presensi');
+            if (storedConfig) {
+                try {
+                    firebaseConfig = JSON.parse(storedConfig);
+                    document.getElementById('firebase-config-input').value = JSON.stringify(firebaseConfig, null, 2);
+                } catch(e) {
+                    firebaseConfig = null;
+                }
+            }
+
+            // 2. Gunakan fallback config default jika tidak ada input kustom
+            if (!firebaseConfig && typeof __firebase_config !== 'undefined') {
+                try {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                } catch(e) {
+                    firebaseConfig = null;
+                }
+            }
+
+            // Jika config masih tidak ada sama sekali, sediakan Local Storage Mode
+            if (!firebaseConfig) {
+                updateDbStatus('Local Sandbox Mode', 'indigo');
+                loadLocalBackupData();
+                switchView('dashboard');
+                return;
+            }
+
+            try {
+                // Inisiasi App
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Autentikasi terlebih dahulu (Sesuai RULE 3)
+                let userCredential;
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    userCredential = await signInAnonymously(auth);
+                }
+
+                if (userCredential) {
+                    updateDbStatus('Connected', 'emerald');
+                    startFirestoreSync();
+                } else {
+                    throw new Error("Gagal login anonim");
+                }
+            } catch (error) {
+                console.error("Gagal mengkoneksikan Firebase: ", error);
+                showToast("Koneksi Database bermasalah. Mengaktifkan mode Sandbox.", "error");
+                updateDbStatus('Connection Error (Local Storage Enabled)', 'rose');
+                loadLocalBackupData();
+            }
+
+            switchView('dashboard');
+        }
+
+        function updateDbStatus(status, color) {
+            const ping = document.getElementById('db-status-ping');
+            const dot = document.getElementById('db-status-dot');
+            const txt = document.getElementById('db-status-text');
+
+            txt.innerText = status;
+            ping.className = `animate-ping absolute inline-flex h-full w-full rounded-full bg-${color}-400 opacity-75`;
+            dot.className = `relative inline-flex rounded-full h-2.5 w-2.5 bg-${color}-500`;
+            txt.className = `text-xs font-semibold text-${color}-500`;
+        }
+
+        function startFirestoreSync() {
+            // Hapus snapshot terdahulu jika ada
+            activeSnapshotUnsubs.forEach(unsub => unsub());
+            activeSnapshotUnsubs = [];
+
+            // RULE 1: Menggunakan Path Terstruktur yang Ketat
+            const studentsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'students');
+            const attendanceColRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
+
+            // Listeners Real-time Siswa
+            const unsubStudents = onSnapshot(studentsColRef, (snapshot) => {
+                localStudents = [];
+                snapshot.forEach(doc => {
+                    localStudents.push({ id: doc.id, ...doc.data() });
+                });
+                renderSiswaList();
+                calculateDashboardStats();
+                loadAttendanceForSelectedDate();
+            }, (error) => {
+                console.error("Gagal sinkron data siswa: ", error);
+            });
+            activeSnapshotUnsubs.push(unsubStudents);
+
+            // Listeners Real-time Presensi
+            const unsubAttendance = onSnapshot(attendanceColRef, (snapshot) => {
+                localAttendance = {};
+                snapshot.forEach(doc => {
+                    localAttendance[doc.id] = doc.data(); // Key: 'yyyy-mm-dd'
+                });
+                loadAttendanceForSelectedDate();
+                calculateDashboardStats();
+            }, (error) => {
+                console.error("Gagal sinkron data presensi: ", error);
+            });
+            activeSnapshotUnsubs.push(unsubAttendance);
+        }
+
+        // Simpan Konfigurasi Kustom dari Pengguna
+        window.saveCustomFirebaseConfig = function() {
+            let rawInput = document.getElementById('firebase-config-input').value.trim();
+            if (!rawInput) {
+                localStorage.removeItem('custom_firebase_config_presensi');
+                showToast("Konfigurasi kustom dihapus. Menggunakan setelan default.", "info");
+                setTimeout(() => location.reload(), 1500);
+                return;
+            }
+
+            try {
+                // Perbaiki karakter '\n' literal yang tidak sengaja tersalin
+                rawInput = rawInput.replace(/\\n/g, '\n');
+
+                // Jika pengguna meng-copy mentah deklarasi variable 'const firebaseConfig = ...'
+                if (rawInput.includes('firebaseConfig =')) {
+                    rawInput = rawInput.split('firebaseConfig =')[1];
+                }
+                if (rawInput.includes('const ')) {
+                    rawInput = rawInput.replace(/const\s+\w+\s*=\s*/, '');
+                }
+                if (rawInput.trim().endsWith(';')) {
+                    rawInput = rawInput.trim().slice(0, -1);
+                }
+
+                // Parser cerdas: coba dengan JSON standar, jika gagal gunakan evaluator objek longgar
+                let parsed;
+                try {
+                    parsed = JSON.parse(rawInput);
+                } catch (e) {
+                    // Membaca format objek JS tanpa kutip (longgar) dengan aman
+                    parsed = Function('"use strict";return (' + rawInput + ')')();
+                }
+
+                if (!parsed.apiKey || !parsed.projectId) {
+                    showToast("Config tidak valid (Kurang apiKey atau projectId)", "error");
+                    return;
+                }
+
+                // Simpan dalam format JSON yang bersih dan rapi
+                localStorage.setItem('custom_firebase_config_presensi', JSON.stringify(parsed, null, 2));
+                showToast("Berhasil menyimpan config! Memulai ulang aplikasi...", "success");
+                setTimeout(() => location.reload(), 1500);
+            } catch(e) {
+                console.error("Error parsing input config:", e);
+                showToast("Input salah! Pastikan format sesuai dengan kode config dari Firebase.", "error");
+            }
+        };
+
+        function loadLocalBackupData() {
+            const backupStudents = localStorage.getItem('sandbox_students');
+            const backupAttendance = localStorage.getItem('sandbox_attendance');
+
+            if (backupStudents) {
+                localStudents = JSON.parse(backupStudents);
+            } else {
+                // Contoh Data Awal Siswa jika benar-benar kosong
+                localStudents = [
+                    { id: '1', name: 'Ahmad Subardjo', nisn: '0054321011', className: 'XII RPL 1', photo: '' },
+                    { id: '2', name: 'Siti Aminah', nisn: '0054321012', className: 'XII RPL 1', photo: '' },
+                    { id: '3', name: 'Budi Hartono', nisn: '0054321013', className: 'XII RPL 1', photo: '' }
+                ];
+                localStorage.setItem('sandbox_students', JSON.stringify(localStudents));
+            }
+
+            if (backupAttendance) {
+                localAttendance = JSON.parse(backupAttendance);
+            } else {
+                localAttendance = {};
+            }
+            renderSiswaList();
+            calculateDashboardStats();
+        }
+
+        function saveLocalBackupData() {
+            if (!db) {
+                localStorage.setItem('sandbox_students', JSON.stringify(localStudents));
+                localStorage.setItem('sandbox_attendance', JSON.stringify(localAttendance));
+            }
+        }
+
+        window.handlePhotoUpload = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Menggunakan Canvas untuk kompresi agar di bawah batasan 1MB Firestore
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 120; // optimalisasi avatar kecil
+                    const MAX_HEIGHT = 120;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Ekspor ke Base64 berkualitas 0.7
+                    currentSiswaPhotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    document.getElementById('siswa-photo-preview').src = currentSiswaPhotoBase64;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.saveSiswa = async function() {
+            const id = document.getElementById('siswa-id').value;
+            const name = document.getElementById('siswa-nama').value.trim();
+            const nisn = document.getElementById('siswa-nisn').value.trim();
+            const className = document.getElementById('siswa-kelas').value.trim();
+
+            if (!name || !nisn || !className) {
+                showToast("Semua kolom isian wajib diisi!", "error");
+                return;
+            }
+
+            const payload = {
+                name,
+                nisn,
+                className,
+                photo: currentSiswaPhotoBase64 || ""
+            };
+
+            if (db) {
+                // Simpan ke Firestore
+                try {
+                    const targetId = id || crypto.randomUUID();
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', targetId);
+                    await setDoc(docRef, payload, { merge: true });
+                    showToast("Siswa berhasil disimpan ke Firestore!", "success");
+                    closeSiswaModal();
+                } catch(e) {
+                    console.error("Gagal simpan siswa ke DB: ", e);
+                    showToast("Gagal menyinkronkan data siswa.", "error");
+                }
+            } else {
+                // Mode Sandbox
+                if (id) {
+                    const idx = localStudents.findIndex(s => s.id === id);
+                    if (idx !== -1) {
+                        localStudents[idx] = { id, ...payload };
+                    }
+                } else {
+                    localStudents.push({ id: Date.now().toString(), ...payload });
+                }
+                saveLocalBackupData();
+                renderSiswaList();
+                showToast("Siswa disimpan lokal!", "success");
+                closeSiswaModal();
+            }
+        };
+
+        window.deleteSiswa = async function(id) {
+            const confirmed = confirm("Apakah Anda yakin ingin menghapus data siswa ini? Ini akan berpengaruh pada laporan.");
+            if (!confirmed) return;
+
+            if (db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', id);
+                    await deleteDoc(docRef);
+                    showToast("Siswa dihapus dari Firestore!", "success");
+                } catch(e) {
+                    showToast("Gagal menghapus siswa.", "error");
+                }
+            } else {
+                localStudents = localStudents.filter(s => s.id !== id);
+                saveLocalBackupData();
+                renderSiswaList();
+                showToast("Siswa dihapus secara lokal!", "success");
+            }
+        };
+
+        window.openAddSiswaModal = function() {
+            document.getElementById('modal-title').innerText = "Tambah Siswa Baru";
+            document.getElementById('siswa-id').value = "";
+            document.getElementById('siswa-nama').value = "";
+            document.getElementById('siswa-nisn').value = "";
+            document.getElementById('siswa-kelas').value = "";
+            document.getElementById('siswa-photo-preview').src = "https://placehold.co/150x150/e2e8f0/64748b?text=Profil";
+            currentSiswaPhotoBase64 = "";
+
+            const modal = document.getElementById('siswa-modal');
+            modal.classList.remove('hidden');
+        };
+
+        window.openEditSiswaModal = function(id) {
+            const target = localStudents.find(s => s.id === id);
+            if (!target) return;
+
+            document.getElementById('modal-title').innerText = "Ubah Detail Siswa";
+            document.getElementById('siswa-id').value = target.id;
+            document.getElementById('siswa-nama').value = target.name;
+            document.getElementById('siswa-nisn').value = target.nisn;
+            document.getElementById('siswa-kelas').value = target.className;
+            
+            const photoSrc = target.photo || "https://placehold.co/150x150/e2e8f0/64748b?text=Profil";
+            document.getElementById('siswa-photo-preview').src = photoSrc;
+            currentSiswaPhotoBase64 = target.photo || "";
+
+            const modal = document.getElementById('siswa-modal');
+            modal.classList.remove('hidden');
+        };
+
+        window.closeSiswaModal = function() {
+            document.getElementById('siswa-modal').classList.add('hidden');
+        };
+
+        window.renderSiswaList = function() {
+            const container = document.getElementById('siswa-grid');
+            const searchVal = document.getElementById('siswa-search').value.toLowerCase();
+            container.innerHTML = "";
+
+            const filtered = localStudents.filter(s => 
+                s.name.toLowerCase().includes(searchVal) || 
+                s.nisn.toLowerCase().includes(searchVal)
+            );
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-12 text-center bg-white border border-dashed border-slate-200 rounded-2xl">
+                        <i class="fa-solid fa-folder-open text-slate-300 text-4xl mb-3"></i>
+                        <p class="text-sm text-slate-500">Tidak ada data siswa ditemukan.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(s => {
+                const avatar = s.photo ? s.photo : "https://placehold.co/150x150/e2e8f0/64748b?text=Siswa";
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex items-start justify-between gap-4";
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                            <img src="${avatar}" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm leading-tight">${s.name}</h4>
+                            <p class="text-xs text-indigo-600 font-semibold mt-1">${s.className}</p>
+                            <p class="text-[10px] text-slate-400 font-mono mt-0.5">NISN: ${s.nisn}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="openEditSiswaModal('${s.id}')" class="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs transition-all"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteSiswa('${s.id}')" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs transition-all"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        };
+
+        window.loadAttendanceForSelectedDate = function() {
+            const date = document.getElementById('presensi-date-select').value;
+            const tbody = document.getElementById('attendance-table-body');
+            tbody.innerHTML = "";
+
+            if (!date) return;
+
+            // Cari rekor kehadiran di tanggal ini
+            const record = localAttendance[date] || { records: {}, notes: {} };
+
+            if (localStudents.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-users-slash text-3xl mb-2"></i>
+                            <p class="text-xs">Silakan tambahkan data siswa di menu 'Kelola Siswa' terlebih dahulu.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            localStudents.forEach(s => {
+                const status = record.records[s.id] || "H"; // Default "Hadir"
+                const notes = record.notes[s.id] || "";
+                const avatar = s.photo ? s.photo : "https://placehold.co/150x150/e2e8f0/64748b?text=Siswa";
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50 transition-all";
+                tr.innerHTML = `
+                    <td class="py-4 px-6 flex items-center gap-3">
+                        <img src="${avatar}" class="w-9 h-9 rounded-full object-cover border border-slate-200">
+                        <div>
+                            <p class="font-semibold text-slate-800 text-sm">${s.name}</p>
+                            <p class="text-[10px] text-slate-400 font-mono">NISN: ${s.nisn}</p>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="flex justify-center items-center gap-1.5 max-w-xs mx-auto">
+                            <!-- Hadir -->
+                            <button onclick="updateRowStatus('${s.id}', 'H')" data-status="H" class="status-btn-${s.id} flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${status === 'H' ? 'bg-emerald-500 border-emerald-600 text-white shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}">H</button>
+                            <!-- Sakit -->
+                            <button onclick="updateRowStatus('${s.id}', 'S')" data-status="S" class="status-btn-${s.id} flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${status === 'S' ? 'bg-amber-500 border-amber-600 text-white shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}">S</button>
+                            <!-- Izin -->
+                            <button onclick="updateRowStatus('${s.id}', 'I')" data-status="I" class="status-btn-${s.id} flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${status === 'I' ? 'bg-indigo-500 border-indigo-600 text-white shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}">I</button>
+                            <!-- Alpa -->
+                            <button onclick="updateRowStatus('${s.id}', 'A')" data-status="A" class="status-btn-${s.id} flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border ${status === 'A' ? 'bg-rose-500 border-rose-600 text-white shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}">A</button>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <input type="text" id="note-${s.id}" value="${notes}" placeholder="Keterangan..." class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.updateRowStatus = function(studentId, newStatus) {
+            const btns = document.querySelectorAll(`.status-btn-${studentId}`);
+            btns.forEach(btn => {
+                const stat = btn.getAttribute('data-status');
+                if (stat === newStatus) {
+                    if (newStatus === 'H') btn.className = `status-btn-${studentId} flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border bg-emerald-500 border-emerald-600 text-white shadow-sm`;
+                    if (newStatus === 'S') btn.className = `status-btn-${studentId} flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border bg-amber-500 border-amber-600 text-white shadow-sm`;
+                    if (newStatus === 'I') btn.className = `status-btn-${studentId} flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border bg-indigo-500 border-indigo-600 text-white shadow-sm`;
+                    if (newStatus === 'A') btn.className = `status-btn-${studentId} flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border bg-rose-500 border-rose-600 text-white shadow-sm`;
+                } else {
+                    btn.className = `status-btn-${studentId} flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all border bg-white text-slate-500 border-slate-200 hover:bg-slate-50`;
+                }
+            });
+        };
+
+        window.setAllAttendance = function(status) {
+            localStudents.forEach(s => {
+                updateRowStatus(s.id, status);
+            });
+            showToast(`Sukses mengubah status semua siswa ke ${status === 'H' ? 'Hadir' : status}!`, 'info');
+        };
+
+        window.saveAttendance = async function() {
+            const date = document.getElementById('presensi-date-select').value;
+            if (!date) return;
+
+            const records = {};
+            const notes = {};
+
+            localStudents.forEach(s => {
+                // Ekstrak status dari button aktif
+                const btns = document.querySelectorAll(`.status-btn-${s.id}`);
+                let status = "H";
+                btns.forEach(btn => {
+                    if (btn.classList.contains('text-white')) {
+                        status = btn.getAttribute('data-status');
+                    }
+                });
+                records[s.id] = status;
+
+                const noteVal = document.getElementById(`note-${s.id}`).value.trim();
+                notes[s.id] = noteVal;
+            });
+
+            const payload = {
+                date,
+                records,
+                notes,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (db) {
+                try {
+                    // RULE 1: Simpan sesuai path database terstruktur yang ketat
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', date);
+                    await setDoc(docRef, payload, { merge: true });
+                    showToast("Presensi berhasil disimpan ke Firestore!", "success");
+                } catch(e) {
+                    showToast("Gagal menyimpan presensi.", "error");
+                }
+            } else {
+                localAttendance[date] = payload;
+                saveLocalBackupData();
+                showToast("Presensi berhasil disimpan lokal!", "success");
+            }
+
+            calculateDashboardStats();
+        };
+
+        function calculateDashboardStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const record = localAttendance[today] || { records: {}, notes: {} };
+
+            let totalSiswa = localStudents.length;
+            let hadir = 0;
+            let sakitIzin = 0;
+            let alpa = 0;
+
+            localStudents.forEach(s => {
+                const stat = record.records[s.id] || "H";
+                if (stat === 'H') hadir++;
+                else if (stat === 'S' || stat === 'I') sakitIzin++;
+                else if (stat === 'A') alpa++;
+            });
+
+            document.getElementById('stat-total-siswa').innerText = totalSiswa;
+            document.getElementById('stat-hadir').innerText = hadir;
+            document.getElementById('stat-sakit-izin').innerText = sakitIzin;
+            document.getElementById('stat-alpa').innerText = alpa;
+
+            // Update Progress Ring Kehadiran
+            const circle = document.getElementById('progress-circle');
+            const percentText = document.getElementById('progress-percent');
+            const verdictText = document.getElementById('ratio-verdict');
+
+            let ratio = totalSiswa > 0 ? Math.round((hadir / totalSiswa) * 100) : 0;
+            
+            // Formula Dash Offset Lingkaran (Keliling = 2 * PI * r = 2 * 3.14 * 60 = 377)
+            const circumference = 377;
+            const offset = circumference - (ratio / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+            percentText.innerText = `${ratio}%`;
+
+            if (totalSiswa === 0) {
+                verdictText.innerText = "Belum ada siswa yang ditambahkan.";
+            } else {
+                verdictText.innerHTML = `Rasio kehadiran hari ini adalah <strong>${ratio}%</strong> (${hadir} dari ${totalSiswa} siswa).`;
+            }
+
+            // Render Bar Chart Sederhana
+            const barChart = document.getElementById('attendance-bar-chart');
+            barChart.innerHTML = "";
+
+            const statsList = [
+                { label: 'Hadir', count: hadir, color: 'bg-emerald-500' },
+                { label: 'Sakit / Izin', count: sakitIzin, color: 'bg-amber-500' },
+                { label: 'Alpa', count: alpa, color: 'bg-rose-500' }
+            ];
+
+            const maxVal = Math.max(totalSiswa, 1);
+
+            statsList.forEach(item => {
+                const pct = (item.count / maxVal) * 100;
+                const bar = document.createElement('div');
+                bar.className = "flex-1 flex flex-col items-center justify-end h-full group";
+                bar.innerHTML = `
+                    <div class="text-xs font-bold mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white px-2 py-0.5 rounded shadow">${item.count}</div>
+                    <div class="${item.color} w-full rounded-t-lg transition-all duration-500" style="height: ${pct}%"></div>
+                    <span class="text-xs text-slate-500 font-semibold mt-2 text-center w-full truncate">${item.label}</span>
+                `;
+                barChart.appendChild(bar);
+            });
+        }
+
+        window.calculateReportRekap = function() {
+            const tbody = document.getElementById('rekap-table-body');
+            tbody.innerHTML = "";
+
+            if (localStudents.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-8 text-center text-slate-400">Belum ada data rekap presensi.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            localStudents.forEach(s => {
+                let hadir = 0;
+                let sakit = 0;
+                let izin = 0;
+                let alpa = 0;
+                let totalPresensi = 0;
+
+                // Hitung dari database attendance
+                Object.values(localAttendance).forEach(day => {
+                    const status = day.records[s.id];
+                    if (status) {
+                        totalPresensi++;
+                        if (status === 'H') hadir++;
+                        else if (status === 'S') sakit++;
+                        else if (status === 'I') izin++;
+                        else if (status === 'A') alpa++;
+                    }
+                });
+
+                const pct = totalPresensi > 0 ? Math.round((hadir / totalPresensi) * 100) : 0;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50 transition-all text-slate-700";
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-semibold">${s.name}</td>
+                    <td class="py-4 px-6 text-center text-emerald-600 font-bold">${hadir}</td>
+                    <td class="py-4 px-6 text-center text-amber-600 font-semibold">${sakit}</td>
+                    <td class="py-4 px-6 text-center text-indigo-600 font-semibold">${izin}</td>
+                    <td class="py-4 px-6 text-center text-rose-600 font-bold">${alpa}</td>
+                    <td class="py-4 px-6 text-center font-bold text-slate-800">${totalPresensi}</td>
+                    <td class="py-4 px-6 text-center">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${pct >= 90 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">${pct}%</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.exportToCSV = function() {
+            if (localStudents.length === 0) {
+                showToast("Tidak ada data untuk diekspor", "error");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Nama Siswa,NISN,Kelas,Hadir,Sakit,Izin,Alpa,Total Hari,Persentase Kehadiran\n";
+
+            localStudents.forEach(s => {
+                let hadir = 0, sakit = 0, izin = 0, alpa = 0, total = 0;
+                Object.values(localAttendance).forEach(day => {
+                    const status = day.records[s.id];
+                    if (status) {
+                        total++;
+                        if (status === 'H') hadir++;
+                        else if (status === 'S') sakit++;
+                        else if (status === 'I') izin++;
+                        else if (status === 'A') alpa++;
+                    }
+                });
+
+                const pct = total > 0 ? Math.round((hadir / total) * 100) : 0;
+                csvContent += `"${s.name}","${s.nisn}","${s.className}",${hadir},${sakit},${izin},${alpa},${total},"${pct}%"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Rekap_Kehadiran_Siswa_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Sukses mengekspor laporan ke CSV!", "success");
+        };
+
+        // Muat inisialisasi awal
+        setupFirebase();
+    </script>
+</body>
+</html>
