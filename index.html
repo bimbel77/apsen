@@ -41,9 +41,9 @@
           </div>
         </div>
         <div class="flex items-center space-x-4">
-          <div class="flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-semibold">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Terhubung ke Firebase</span>
+          <div id="connectionStatus" class="flex items-center space-x-2 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full text-xs font-semibold">
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            <span>Menghubungkan...</span>
           </div>
           <button id="btnSettings" class="text-slate-500 hover:text-slate-800 p-2 rounded-lg hover:bg-slate-100 transition-colors">
             <i class="fa-solid fa-gear text-lg"></i>
@@ -55,13 +55,34 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     
-    <!-- Toast Notification Overlay -->
     <div id="toast" class="fixed top-20 right-4 z-50 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-300 flex items-center p-4 mb-4 text-slate-500 bg-white rounded-2xl shadow-xl border border-slate-100" role="alert">
       <div id="toastIcon" class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg"></div>
       <div id="toastMessage" class="ms-3 text-sm font-semibold"></div>
     </div>
 
-    <!-- Statistik Panel -->
+    <!-- Alert Box khusus jika terjadi error hak akses (Permission Denied) -->
+    <div id="errorGuideBox" class="hidden bg-rose-50 border border-rose-200 text-rose-800 p-6 rounded-3xl mb-8 shadow-sm">
+      <div class="flex items-start space-x-3.5">
+        <div class="bg-rose-100 text-rose-600 p-2.5 rounded-xl">
+          <i class="fa-solid fa-shield-halved text-xl"></i>
+        </div>
+        <div class="flex-grow">
+          <h3 class="font-bold text-base text-rose-900">⚠️ Aturan Database Firebase Anda Masih Terkunci!</h3>
+          <p class="text-sm text-rose-700 mt-1 leading-relaxed">
+            Firebase menolak pengiriman data karena database Cloud Firestore Anda diatur dalam Mode Produksi (Terkunci). Silakan ikuti panduan berikut untuk membukanya:
+          </p>
+          <ol class="list-decimal list-inside text-xs mt-3 space-y-1.5 text-rose-800 font-medium">
+            <li>Buka kembali tab <span class="bg-rose-100 px-1 rounded font-bold">Firebase Console</span> di browser Anda.</li>
+            <li>Klik menu <span class="bg-rose-100 px-1 rounded font-bold">Firestore Database</span> di sebelah kiri, lalu pilih tab <span class="bg-rose-100 px-1 rounded font-bold">Rules</span> (di bagian atas).</li>
+            <li>Cari tulisan <code class="bg-slate-900 text-slate-100 px-1.5 py-0.5 rounded text-[10px] font-mono">allow read, write: if false;</code></li>
+            <li>Ubah menjadi <code class="bg-slate-900 text-slate-100 px-1.5 py-0.5 rounded text-[10px] font-mono">allow read, write: if true;</code></li>
+            <li>Klik tombol biru <span class="bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold">Publish</span> di pojok kanan atas layar Firebase Anda.</li>
+            <li>Jika sudah, muat ulang (refresh) halaman GitHub Pages/aplikasi Anda ini dan coba kirim absen kembali!</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
         <div>
@@ -155,6 +176,7 @@
         </form>
       </div>
 
+      <!-- Live Log Table Card -->
       <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col min-h-[400px]">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-slate-100 gap-4">
           <div class="flex items-center space-x-2">
@@ -198,7 +220,6 @@
     </div>
   </main>
 
-  <!-- Configuration Modal (Settings) -->
   <div id="settingsModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
       <div class="fixed inset-0 transition-opacity" aria-hidden="true">
@@ -243,7 +264,6 @@
     </div>
   </div>
 
-  <!-- Firebase SDK Modular Scripts (ESM) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { 
@@ -258,7 +278,7 @@
       serverTimestamp 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Konfigurasi Database Firebase Aktif Milik Anda (Dari berkas JSON DATA BASE_2.txt)
+    // Konfigurasi Database Firebase yang valid dari JSON DATA BASE_2.txt
     const DEFAULT_CONFIG = {
       apiKey: "AIzaSyDs12a2kuNBYbb7-7ud-QuzT5RL-hwPnFU",
       authDomain: "presensi-1c610.firebaseapp.com",
@@ -273,14 +293,14 @@
     let db;
     let unsubscribe = null;
 
-    // Inisialisasi Firebase berdasarkan localStorage atau config default
+    // Mendapatkan config tersimpan di localStorage browser
     function getStoredConfig() {
       const stored = localStorage.getItem('firebase_presensi_config');
       if (stored) {
         try {
           return JSON.parse(stored);
         } catch (e) {
-          console.error("Format config tersimpan rusak. Menggunakan default.", e);
+          console.error("Format config rusak, memuat ulang setelan bawaan.", e);
         }
       }
       return DEFAULT_CONFIG;
@@ -288,22 +308,28 @@
 
     function initFirebase() {
       const config = getStoredConfig();
-      // Simpan di input pengaturan agar user melihat JSON terkini
       document.getElementById('configJsonInput').value = JSON.stringify(config, null, 2);
 
       try {
+        // Hapus instansiasi lama jika ada
         app = initializeApp(config);
         db = getFirestore(app);
-        showToast("Koneksi Firebase Berhasil", "success");
+        
+        // Perbarui status koneksi di Header
+        const statusEl = document.getElementById('connectionStatus');
+        statusEl.className = "flex items-center space-x-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-semibold";
+        statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>Terhubung ke Firebase</span>';
+        
+        document.getElementById('errorGuideBox').classList.add('hidden'); // Sembunyikan panduan jika sukses
         listenToPresensiData();
       } catch (error) {
-        console.error("Gagal menginisialisasi Firebase:", error);
-        showToast("Konfigurasi Firebase Tidak Valid!", "error");
+        console.error("Gagal inisialisasi Firebase:", error);
+        showToast("Gagal memuat konfigurasi database!", "error");
         renderErrorMessage(error.message);
       }
     }
 
-    // Fungsi Toast UI (Sebagai pengganti alert)
+    // Fungsi Toast UI
     function showToast(message, type = "success") {
       const toast = document.getElementById('toast');
       const icon = document.getElementById('toastIcon');
@@ -324,6 +350,7 @@
       }, 4000);
     }
 
+    // Render pesan jika database error
     function renderErrorMessage(errText) {
       const tbody = document.getElementById('attendanceList');
       tbody.innerHTML = `
@@ -331,135 +358,142 @@
           <td colspan="4" class="text-center py-12 text-rose-500">
             <div class="flex flex-col items-center justify-center space-y-2">
               <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
-              <span class="font-bold">Eror Koneksi Firebase</span>
+              <span class="font-bold">Error Koneksi Database</span>
               <p class="text-xs text-slate-500 max-w-sm">${errText}</p>
             </div>
           </td>
         </tr>
       `;
+      
+      const statusEl = document.getElementById('connectionStatus');
+      statusEl.className = "flex items-center space-x-2 bg-rose-50 text-rose-700 px-3 py-1.5 rounded-full text-xs font-semibold";
+      statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span><span>Koneksi Gagal</span>';
     }
 
-    // Mendengarkan perubahan data Firestore secara realtime
     function listenToPresensiData() {
       if (unsubscribe) {
-        unsubscribe(); // Hapus subskripsi lama jika menginisialisasi ulang
+        unsubscribe(); 
       }
 
-      const q = query(collection(db, "presensi"), orderBy("waktu", "desc"));
-      
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        const listContainer = document.getElementById('attendanceList');
-        listContainer.innerHTML = '';
+      try {
+        const q = query(collection(db, "presensi"), orderBy("waktu", "desc"));
+        
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const listContainer = document.getElementById('attendanceList');
+          listContainer.innerHTML = '';
 
-        let total = 0, hadir = 0, izin = 0, sakit = 0;
-        let records = [];
+          let total = 0, hadir = 0, izin = 0, sakit = 0;
+          let records = [];
 
-        snapshot.forEach((doc) => {
-          const item = doc.data();
-          item.id = doc.id;
-          records.push(item);
+          snapshot.forEach((doc) => {
+            const item = doc.data();
+            item.id = doc.id;
+            records.push(item);
 
-          // Update Stats counter
-          total++;
-          if (item.status === 'Hadir') hadir++;
-          else if (item.status === 'Izin') izin++;
-          else if (item.status === 'Sakit') sakit++;
-        });
-
-        // Terapkan statistik ke kartu atas
-        document.getElementById('statHadir').innerText = hadir;
-        document.getElementById('statIzin').innerText = izin;
-        document.getElementById('statSakit').innerText = sakit;
-        document.getElementById('statTotal').innerText = total;
-
-        const filterVal = document.getElementById('tableSearch').value.toLowerCase();
-        const filteredRecords = records.filter(item => 
-          item.nama.toLowerCase().includes(filterVal) || 
-          item.kelas.toLowerCase().includes(filterVal)
-        );
-
-        if (filteredRecords.length === 0) {
-          listContainer.innerHTML = `
-            <tr>
-              <td colspan="4" class="text-center py-12 text-slate-400">
-                <i class="fa-regular fa-folder-open text-2xl mb-2 block text-slate-300"></i>
-                Belum ada data presensi yang sesuai.
-              </td>
-            </tr>
-          `;
-          return;
-        }
-
-        filteredRecords.forEach((item) => {
-          let badgeColor = '';
-          let badgeIcon = '';
-          if (item.status === 'Hadir') {
-            badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-100';
-            badgeIcon = 'fa-user-check';
-          } else if (item.status === 'Izin') {
-            badgeColor = 'bg-blue-50 text-blue-700 border-blue-100';
-            badgeIcon = 'fa-envelope';
-          } else {
-            badgeColor = 'bg-amber-50 text-amber-700 border-amber-100';
-            badgeIcon = 'fa-file-medical';
-          }
-
-          // Format timestamp
-          let timeString = 'Menunggu...';
-          if (item.waktu) {
-            const dateObj = item.waktu.toDate ? item.waktu.toDate() : new Date(item.waktu);
-            timeString = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' - ' + dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-          }
-
-          const tr = document.createElement('tr');
-          tr.className = "hover:bg-slate-50/50 transition-colors";
-          tr.innerHTML = `
-            <td class="py-4 px-4">
-              <div class="font-semibold text-slate-800">${item.nama}</div>
-              <div class="text-xs text-slate-400 font-medium">${item.kelas}</div>
-              \${item.keterangan ? \`<p class="text-xs text-slate-500 italic mt-1 bg-slate-50 p-2 rounded-lg border border-slate-100">\${item.keterangan}</p>\` : ''}
-            </td>
-            <td class="py-4 px-4 text-slate-500 text-xs font-semibold">
-              \${timeString}
-            </td>
-            <td class="py-4 px-4">
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border \${badgeColor}">
-                <i class="fa-solid \${badgeIcon} text-[10px]"></i>
-                \${item.status}
-              </span>
-            </td>
-            <td class="py-4 px-4 text-right">
-              <button data-id="\${item.id}" class="delete-btn text-rose-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all">
-                <i class="fa-regular fa-trash-can"></i>
-              </button>
-            </td>
-          `;
-
-          // Logika penghapusan item database
-          tr.querySelector('.delete-btn').addEventListener('click', async (e) => {
-            const docId = e.currentTarget.getAttribute('data-id');
-            // Menghindari alert/confirm bawaan browser dan menggunakan konfirmasi visual aman
-            const userConfirmed = window.confirm("Apakah Anda yakin ingin menghapus data presensi ini?");
-            if (userConfirmed) {
-              try {
-                await deleteDoc(doc(db, "presensi", docId));
-                showToast("Data presensi telah dihapus", "success");
-              } catch (err) {
-                console.error("Gagal menghapus:", err);
-                showToast("Gagal menghapus data", "error");
-              }
-            }
+            total++;
+            if (item.status === 'Hadir') hadir++;
+            else if (item.status === 'Izin') izin++;
+            else if (item.status === 'Sakit') sakit++;
           });
 
-          listContainer.appendChild(tr);
+          // Terapkan statistik
+          document.getElementById('statHadir').innerText = hadir;
+          document.getElementById('statIzin').innerText = izin;
+          document.getElementById('statSakit').innerText = sakit;
+          document.getElementById('statTotal').innerText = total;
+
+          const filterVal = document.getElementById('tableSearch').value.toLowerCase();
+          const filteredRecords = records.filter(item => 
+            item.nama.toLowerCase().includes(filterVal) || 
+            item.kelas.toLowerCase().includes(filterVal)
+          );
+
+          if (filteredRecords.length === 0) {
+            listContainer.innerHTML = `
+              <tr>
+                <td colspan="4" class="text-center py-12 text-slate-400">
+                  <i class="fa-regular fa-folder-open text-2xl mb-2 block text-slate-300"></i>
+                  Belum ada data presensi yang sesuai.
+                </td>
+              </tr>
+            `;
+            return;
+          }
+
+          filteredRecords.forEach((item) => {
+            let badgeColor = '';
+            let badgeIcon = '';
+            if (item.status === 'Hadir') {
+              badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+              badgeIcon = 'fa-user-check';
+            } else if (item.status === 'Izin') {
+              badgeColor = 'bg-blue-50 text-blue-700 border-blue-100';
+              badgeIcon = 'fa-envelope';
+            } else {
+              badgeColor = 'bg-amber-50 text-amber-700 border-amber-100';
+              badgeIcon = 'fa-file-medical';
+            }
+
+            let timeString = 'Menunggu...';
+            if (item.waktu) {
+              const dateObj = item.waktu.toDate ? item.waktu.toDate() : new Date(item.waktu);
+              timeString = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' - ' + dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50/50 transition-colors";
+            tr.innerHTML = `
+              <td class="py-4 px-4">
+                <div class="font-semibold text-slate-800">${item.nama}</div>
+                <div class="text-xs text-slate-400 font-medium">${item.kelas}</div>
+                \${item.keterangan ? \`<p class="text-xs text-slate-500 italic mt-1 bg-slate-50 p-2 rounded-lg border border-slate-100">\${item.keterangan}</p>\` : ''}
+              </td>
+              <td class="py-4 px-4 text-slate-500 text-xs font-semibold">
+                \${timeString}
+              </td>
+              <td class="py-4 px-4">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border \${badgeColor}">
+                  <i class="fa-solid \${badgeIcon} text-[10px]"></i>
+                  \${item.status}
+                </span>
+              </td>
+              <td class="py-4 px-4 text-right">
+                <button data-id="\${item.id}" class="delete-btn text-rose-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all">
+                  <i class="fa-regular fa-trash-can"></i>
+                </button>
+              </td>
+            `;
+
+            // Penanganan Hapus data
+            tr.querySelector('.delete-btn').addEventListener('click', async (e) => {
+              const docId = e.currentTarget.getAttribute('data-id');
+              const userConfirmed = window.confirm("Apakah Anda yakin ingin menghapus data presensi ini?");
+              if (userConfirmed) {
+                try {
+                  await deleteDoc(doc(db, "presensi", docId));
+                  showToast("Data presensi berhasil dihapus!", "success");
+                } catch (err) {
+                  console.error("Gagal menghapus:", err);
+                  showToast("Akses Ditolak! Cek aturan rules Firebase Anda.", "error");
+                }
+              }
+            });
+
+            listContainer.appendChild(tr);
+          });
+        }, (error) => {
+          console.error("Firestore Listen Error:", error);
+          if (error.code === 'permission-denied') {
+            document.getElementById('errorGuideBox').classList.remove('hidden');
+          }
+          renderErrorMessage(error.message);
         });
-      }, (error) => {
-        console.error("Firestore Listen Error:", error);
-        renderErrorMessage(error.message);
-      });
+      } catch (err) {
+        console.error(err);
+        renderErrorMessage(err.message);
+      }
     }
 
-    // Mengirim Form Data Presensi ke Firestore
     document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -483,12 +517,14 @@
         });
 
         showToast("Presensi berhasil dikirim!", "success");
-        // Reset Form
         document.getElementById('attendanceForm').reset();
         document.querySelector('input[name="status"][value="Hadir"]').checked = true;
       } catch (err) {
         console.error("Error menambah data:", err);
-        showToast("Gagal mengirim presensi: " + err.message, "error");
+        if (err.code === 'permission-denied') {
+          document.getElementById('errorGuideBox').classList.remove('hidden');
+        }
+        showToast("Gagal mengirim presensi! Periksa rules Firebase Anda.", "error");
       }
     });
 
@@ -508,7 +544,7 @@
         const parsed = JSON.parse(configStr);
         localStorage.setItem('firebase_presensi_config', JSON.stringify(parsed));
         closeModal();
-        initFirebase(); // Muat ulang Firebase dengan config baru
+        initFirebase();
       } catch (e) {
         showToast("Format JSON Salah / Tidak Valid!", "error");
       }
